@@ -2,13 +2,13 @@
 
 SWPY Token : 
 
-Address : 0xabfCaefd872d0E79E986860c283614ad95a19562
+Address : 0x5788D947D2222996842F81d85Ef2dbE964A36103
 
-BSC contract code : https://bscscan.com/address/0xabfCaefd872d0E79E986860c283614ad95a19562#code
+BSC contract code : https://bscscan.com/address/0x5788D947D2222996842F81d85Ef2dbE964A36103#code
 
 SWPY Masterchef : 
 
-Address : 0x62fAc9E9b88432Ff95e62045BF0ca0cD2d90Dfed
+Address : 0x124062E714F46f9178D0eCc77B460b82685f2b27
 
-BSC contract code : https://bscscan.com/address/0x62fAc9E9b88432Ff95e62045BF0ca0cD2d90Dfed#code
+BSC contract code : https://bscscan.com/address/0x124062E714F46f9178D0eCc77B460b82685f2b27#code
 
