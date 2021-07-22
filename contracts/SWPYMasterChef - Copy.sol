@@ -73,8 +73,6 @@ contract MasterChef is Ownable {
     uint256 public totalAllocPoint = 0;
     // The block number when SWPY mining starts.
     uint256 public startBlock;
-    // Deposited amount SWPY in MasterChef
-    uint256 public depositedSwpy;
 
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount);
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount);
@@ -146,9 +144,6 @@ contract MasterChef is Ownable {
         UserInfo storage user = userInfo[_pid][_user];
         uint256 accSwpyPerShare = pool.accSwpyPerShare;
         uint256 lpSupply = pool.lpToken.balanceOf(address(this));
-        if (_pid == 0){
-            lpSupply = depositedSwpy;
-        }
         if (block.number > pool.lastRewardBlock && lpSupply != 0) {
             uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
             uint256 swpyReward = multiplier.mul(swpyPerBlock).mul(pool.allocPoint).div(totalAllocPoint);
@@ -172,10 +167,7 @@ contract MasterChef is Ownable {
             return;
         }
         uint256 lpSupply = pool.lpToken.balanceOf(address(this));
-        if (_pid == 0){
-            lpSupply = depositedSwpy;
-        }
-        if (lpSupply <= 0 || pool.allocPoint == 0) {
+        if (lpSupply == 0 || pool.allocPoint == 0) {
             pool.lastRewardBlock = block.number;
             return;
         }
@@ -191,9 +183,6 @@ contract MasterChef is Ownable {
 
     // Deposit LP tokens to MasterChef for SWPY allocation.
     function deposit(uint256 _pid, uint256 _amount) public {
-
-        require (_pid != 0, 'deposit SWPY by staking');
-
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
         updatePool(_pid);
@@ -219,9 +208,6 @@ contract MasterChef is Ownable {
 
     // Withdraw LP tokens from MasterChef.
     function withdraw(uint256 _pid, uint256 _amount) public {
-
-        require (_pid != 0, 'withdraw SWPY by unstaking');
-
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
         require(user.amount >= _amount, "withdraw: not good");
@@ -238,53 +224,15 @@ contract MasterChef is Ownable {
         emit Withdraw(msg.sender, _pid, _amount);
     }
 
-        // Stake SWPY tokens to MasterChef
-    function enterStaking(uint256 _amount) public {
-        PoolInfo storage pool = poolInfo[0];
-        UserInfo storage user = userInfo[0][msg.sender];
-        updatePool(0);
-        if (user.amount > 0) {
-            uint256 pending = user.amount.mul(pool.accSwpyPerShare).div(1e12).sub(user.rewardDebt);
-            if(pending > 0) {
-                safeSwpyTransfer(msg.sender, pending);
-            }
-        }
-        if(_amount > 0) {
-            pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
-            user.amount = user.amount.add(_amount);
-            depositedSwpy = depositedSwpy.add(_amount);
-        }
-        user.rewardDebt = user.amount.mul(pool.accSwpyPerShare).div(1e12);
-        emit Deposit(msg.sender, 0, _amount);
-    }
-
-    // Withdraw SWPY tokens from STAKING.
-    function leaveStaking(uint256 _amount) public {
-        PoolInfo storage pool = poolInfo[0];
-        UserInfo storage user = userInfo[0][msg.sender];
-        require(user.amount >= _amount, "withdraw: not good");
-        updatePool(0);
-        uint256 pending = user.amount.mul(pool.accSwpyPerShare).div(1e12).sub(user.rewardDebt);
-        if(pending > 0) {
-            safeSwpyTransfer(msg.sender, pending);
-        }
-        if(_amount > 0) {
-            user.amount = user.amount.sub(_amount);
-            pool.lpToken.safeTransfer(address(msg.sender), _amount);
-            depositedSwpy = depositedSwpy.sub(_amount);
-        }
-        user.rewardDebt = user.amount.mul(pool.accSwpyPerShare).div(1e12);
-        emit Withdraw(msg.sender, 0, _amount);
-    }
-
     // Withdraw without caring about rewards. EMERGENCY ONLY.
     function emergencyWithdraw(uint256 _pid) public {
         PoolInfo storage pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][msg.sender];
-        pool.lpToken.safeTransfer(address(msg.sender), user.amount);
-        emit EmergencyWithdraw(msg.sender, _pid, user.amount);
+        uint256 amount = user.amount;
         user.amount = 0;
         user.rewardDebt = 0;
+        pool.lpToken.safeTransfer(address(msg.sender), amount);
+        emit EmergencyWithdraw(msg.sender, _pid, amount);
     }
 
     // Safe swpy transfer function, just in case if rounding error causes pool to not have enough SWPYs.
@@ -317,17 +265,5 @@ contract MasterChef is Ownable {
     function updateEmissionRate(uint256 _swpyPerBlock) public onlyOwner {
         massUpdatePools();
         swpyPerBlock = _swpyPerBlock;
-    }
-
-    function setStartBlock(uint256 _startBlock) public onlyOwner {
-        startBlock = _startBlock;
-
-        uint256 length = poolInfo.length;
-        for (uint256 pid = 0; pid < length; ++pid) {
-            PoolInfo storage pool = poolInfo[pid];
-            if (pool.lastRewardBlock < startBlock) {
-                pool.lastRewardBlock = startBlock;
-            }
-        }
     }
 }
