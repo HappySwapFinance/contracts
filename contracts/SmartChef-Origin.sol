@@ -55,8 +55,6 @@ contract SmartChef is Ownable {
     uint256 public startBlock;
     // The block number when SWPY mining ends.
     uint256 public bonusEndBlock;
-    // Deposited amount SWPY in SmartChef
-    uint256 public depositedSwpy;
 
     event Deposit(address indexed user, uint256 amount);
     event Withdraw(address indexed user, uint256 amount);
@@ -116,8 +114,7 @@ contract SmartChef is Ownable {
         PoolInfo storage pool = poolInfo[0];
         UserInfo storage user = userInfo[_user];
         uint256 accSwpyPerShare = pool.accSwpyPerShare;
-        // uint256 lpSupply = pool.lpToken.balanceOf(address(this));
-        uint256 lpSupply = depositedSwpy;
+        uint256 lpSupply = pool.lpToken.balanceOf(address(this));
         if (block.number > pool.lastRewardBlock && lpSupply != 0) {
             uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
             uint256 swpyReward = multiplier.mul(rewardPerBlock).mul(pool.allocPoint).div(totalAllocPoint);
@@ -132,8 +129,7 @@ contract SmartChef is Ownable {
         if (block.number <= pool.lastRewardBlock) {
             return;
         }
-        // uint256 lpSupply = pool.lpToken.balanceOf(address(this));
-        uint256 lpSupply = depositedSwpy;
+        uint256 lpSupply = pool.lpToken.balanceOf(address(this));
         if (lpSupply == 0) {
             pool.lastRewardBlock = block.number;
             return;
@@ -177,10 +173,8 @@ contract SmartChef is Ownable {
                 uint256 depositFee = _amount.mul(pool.depositFeeBP).div(10000);
                 pool.lpToken.safeTransfer(burnAddress, depositFee);
                 user.amount = user.amount.add(_amount).sub(depositFee);
-                depositedSwpy = depositedSwpy.add(_amount).sub(depositFee);
             }else{
                 user.amount = user.amount.add(_amount);
-                depositedSwpy = depositedSwpy.add(_amount);
             }
         }        
         
@@ -203,7 +197,6 @@ contract SmartChef is Ownable {
         if(_amount > 0) {
             user.amount = user.amount.sub(_amount);
             pool.lpToken.safeTransfer(address(msg.sender), _amount);
-            depositedSwpy = depositedSwpy.sub(_amount);
         }
         user.rewardDebt = user.amount.mul(pool.accSwpyPerShare).div(1e12);
 
